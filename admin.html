@@ -1,0 +1,291 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin | O/L Countdown</title>
+
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 24px 14px;
+      min-height: 100vh;
+      background: #080204;
+      color: white;
+      font-family: Arial, sans-serif;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 850px;
+      margin: auto;
+    }
+
+    h1, h2 { color: #ffcc33; }
+
+    h1 { text-align: center; }
+
+    .panel {
+      background: #16070b;
+      border: 1px solid #d4af37;
+      border-radius: 12px;
+      padding: 22px;
+      margin: 20px 0;
+      box-shadow: 0 0 18px #500014;
+    }
+
+    label {
+      display: block;
+      margin: 12px 0 6px;
+      color: #ffcc33;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      border-radius: 6px;
+      border: 1px solid #63303b;
+      background: #080204;
+      color: white;
+      font-size: 15px;
+    }
+
+    button {
+      padding: 11px 16px;
+      margin-top: 14px;
+      border: none;
+      border-radius: 6px;
+      background: linear-gradient(110deg, #800020, #d4af37);
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:disabled { opacity: .6; }
+
+    .secondary {
+      background: #35121b;
+      border: 1px solid #d4af37;
+    }
+
+    #status {
+      color: #ffcc33;
+      overflow-wrap: anywhere;
+    }
+
+    .feedback {
+      border: 1px solid #63303b;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 14px 0;
+      overflow-wrap: anywhere;
+    }
+
+    .feedback p { line-height: 1.5; }
+
+    .date {
+      color: #c9b8bc;
+      font-size: 13px;
+    }
+
+    .hidden { display: none; }
+
+    .top-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    a { color: #ffcc33; }
+  </style>
+</head>
+
+<body>
+  <main class="container">
+    <h1>O/L COUNTDOWN</h1>
+
+    <section class="panel" id="loginPanel">
+      <h2>Admin Login 🔐</h2>
+
+      <form id="loginForm">
+        <label for="email">Admin Email</label>
+        <input id="email" type="email" autocomplete="username"
+          required>
+
+        <label for="password">Password</label>
+        <input id="password" type="password"
+          autocomplete="current-password" required>
+
+        <button id="loginBtn" type="submit">LOGIN</button>
+      </form>
+    </section>
+
+    <section class="panel hidden" id="dashboard">
+      <div class="top-row">
+        <h2>Visitor Feedback</h2>
+        <button class="secondary" id="logoutBtn" type="button">
+          LOGOUT
+        </button>
+      </div>
+
+      <button id="refreshBtn" type="button">REFRESH FEEDBACK</button>
+      <p id="count">Total feedback: 0</p>
+      <div id="feedbackList"></div>
+    </section>
+
+    <p id="status" role="status" aria-live="polite"></p>
+    <p><a href="index.html">← Back to Home</a></p>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script>
+    const SUPABASE_URL =
+      "https://hvropdnyannticjnjlfx.supabase.co";
+
+    const SUPABASE_PUBLISHABLE_KEY =
+      "sb_publishable_x5Q8CJ9VYXOJJxdp0nGung_ZXZO-C24";
+
+    const db = window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_PUBLISHABLE_KEY
+    );
+
+    const loginPanel = document.getElementById("loginPanel");
+    const dashboard = document.getElementById("dashboard");
+    const status = document.getElementById("status");
+    const list = document.getElementById("feedbackList");
+    const count = document.getElementById("count");
+    const loginBtn = document.getElementById("loginBtn");
+
+    function showLoggedIn(isLoggedIn) {
+      loginPanel.classList.toggle("hidden", isLoggedIn);
+      dashboard.classList.toggle("hidden", !isLoggedIn);
+    }
+
+    async function loadFeedback() {
+      status.textContent = "Loading feedback...";
+      list.replaceChildren();
+
+      const { data, error } = await db
+        .from("feedback")
+        .select("id, name, rating, message, created_at")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error(error);
+        status.textContent =
+          "Could not load feedback. Check your admin access policy.";
+        return;
+      }
+
+      count.textContent = "Total feedback: " + data.length;
+
+      if (data.length === 0) {
+        status.textContent = "No feedback submitted yet.";
+        return;
+      }
+
+      for (const item of data) {
+        const card = document.createElement("article");
+        card.className = "feedback";
+
+        const name = document.createElement("strong");
+        name.textContent = item.name;
+
+        const rating = document.createElement("p");
+        rating.textContent =
+          "Rating: " + "⭐".repeat(item.rating);
+
+        const message = document.createElement("p");
+        message.textContent = item.message;
+
+        const date = document.createElement("p");
+        date.className = "date";
+        date.textContent = new Date(item.created_at).toLocaleString();
+
+        card.append(name, rating, message, date);
+        list.appendChild(card);
+      }
+
+      status.textContent = "Feedback loaded successfully.";
+    }
+
+    async function checkSession() {
+      const { data, error } = await db.auth.getSession();
+
+      if (error) {
+        status.textContent = "Could not check login status.";
+        return;
+      }
+
+      showLoggedIn(Boolean(data.session));
+
+      if (data.session) {
+        await loadFeedback();
+      }
+    }
+
+    document.getElementById("loginForm").addEventListener(
+      "submit", async (event) => {
+        event.preventDefault();
+        loginBtn.disabled = true;
+        status.textContent = "Logging in...";
+
+        try {
+          const email = document.getElementById("email").value.trim();
+          const password = document.getElementById("password").value;
+
+          const { error } = await db.auth.signInWithPassword({
+            email,
+            password
+          });
+
+          if (error) throw error;
+
+          showLoggedIn(true);
+          document.getElementById("password").value = "";
+          await loadFeedback();
+        } catch (error) {
+          console.error(error);
+          status.textContent =
+            "Login failed. Check your email, password and account confirmation.";
+        } finally {
+          loginBtn.disabled = false;
+        }
+      }
+    );
+
+    document.getElementById("logoutBtn").addEventListener(
+      "click", async () => {
+        const { error } = await db.auth.signOut();
+
+        if (error) {
+          status.textContent = "Logout failed. Please try again.";
+          return;
+        }
+
+        showLoggedIn(false);
+        list.replaceChildren();
+        count.textContent = "Total feedback: 0";
+        status.textContent = "Logged out.";
+      }
+    );
+
+    document.getElementById("refreshBtn").addEventListener(
+      "click", loadFeedback
+    );
+
+    db.auth.onAuthStateChange((_event, session) => {
+      showLoggedIn(Boolean(session));
+    });
+
+    checkSession();
+  </script>
+</body>
+</html>

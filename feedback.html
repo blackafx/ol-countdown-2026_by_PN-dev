@@ -1,0 +1,280 @@
+
+<!DOCTYPE html>
+<html lang="si">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Feedback | O/L Countdown</title>
+
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #080204;
+      color: white;
+      font-family: Arial, sans-serif;
+    }
+
+    .feedback-box {
+      width: 100%;
+      max-width: 350px;
+      padding: 24px;
+      background: #16070b;
+      border: 1px solid #d4af37;
+      border-radius: 14px;
+      box-shadow: 0 0 20px #500014;
+    }
+
+    h2 {
+      margin: 0 0 15px;
+      color: #ffcc33;
+      text-align: center;
+      letter-spacing: 2px;
+    }
+
+    #languageSelect { margin-bottom: 12px; }
+
+    .subtitle {
+      margin-bottom: 22px;
+      text-align: center;
+      color: #ddd;
+      font-size: 13px;
+    }
+
+    label {
+      display: block;
+      margin: 14px 0 6px;
+      color: #ffcc33;
+      font-size: 13px;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 11px;
+      background: #080204;
+      color: white;
+      border: 1px solid #63303b;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 17px;
+      border: none;
+      border-radius: 6px;
+      background: linear-gradient(110deg, #800020, #d4af37);
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: wait;
+    }
+
+    .back-link {
+      display: block;
+      margin-top: 18px;
+      text-align: center;
+      color: #ffcc33;
+      text-decoration: none;
+      font-size: 13px;
+    }
+
+    #result {
+      text-align: center;
+      font-size: 13px;
+      color: #ffcc33;
+      overflow-wrap: anywhere;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="feedback-box">
+    <h2 id="title">FEEDBACK</h2>
+
+    <select id="languageSelect" aria-label="Choose language">
+      <option value="si">සිංහල</option>
+      <option value="en">English</option>
+    </select>
+
+    <p class="subtitle" id="subtitle">
+      ඔයාගේ අදහස අපට කියන්න ❤️
+    </p>
+
+    <form id="feedbackForm">
+      <label id="nameLabel" for="name">ඔයාගේ නම</label>
+      <input id="name" type="text" maxlength="80"
+        placeholder="නම ඇතුළත් කරන්න" required>
+
+      <label id="ratingLabel" for="rating">Rating එක</label>
+      <select id="rating" required>
+        <option id="ratingPlaceholder" value="">Rating එකක් තෝරන්න</option>
+        <option value="1">⭐ 1</option>
+        <option value="2">⭐⭐ 2</option>
+        <option value="3">⭐⭐⭐ 3</option>
+        <option value="4">⭐⭐⭐⭐ 4</option>
+        <option value="5">⭐⭐⭐⭐⭐ 5</option>
+      </select>
+
+      <label id="messageLabel" for="message">ඔයාගේ Feedback එක</label>
+      <textarea id="message" maxlength="2000"
+        placeholder="ඔයාගේ අදහස මෙතන ලියන්න..." required></textarea>
+
+      <button id="submitBtn" type="submit">
+        FEEDBACK යොමු කරන්න
+      </button>
+    </form>
+
+    <p id="result" role="status" aria-live="polite"></p>
+
+    <a href="index.html" class="back-link" id="backLink">
+      ← මුල් පිටුවට
+    </a>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script>
+    const SUPABASE_URL =
+      "https://hvropdnyannticjnjlfx.supabase.co";
+
+    const SUPABASE_PUBLISHABLE_KEY =
+      "sb_publishable_x5Q8CJ9VYXOJJxdp0nGung_ZXZO-C24";
+
+    const supabaseClient = window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_PUBLISHABLE_KEY
+    );
+
+    const translations = {
+      si: {
+        title: "FEEDBACK",
+        subtitle: "ඔයාගේ අදහස අපට කියන්න ❤️",
+        nameLabel: "ඔයාගේ නම",
+        namePlaceholder: "නම ඇතුළත් කරන්න",
+        ratingLabel: "Rating එක",
+        ratingPlaceholder: "Rating එකක් තෝරන්න",
+        ratings: [
+          "⭐ 1 - දුර්වලයි", "⭐⭐ 2 - සාමාන්‍යයි",
+          "⭐⭐⭐ 3 - හොඳයි", "⭐⭐⭐⭐ 4 - ඉතා හොඳයි",
+          "⭐⭐⭐⭐⭐ 5 - විශිෂ්ටයි"
+        ],
+        messageLabel: "ඔයාගේ Feedback එක",
+        messagePlaceholder: "ඔයාගේ අදහස මෙතන ලියන්න...",
+        submit: "FEEDBACK යොමු කරන්න",
+        sending: "යොමු කරමින්...",
+        back: "← මුල් පිටුවට",
+        thanks: "ඔයාගේ අදහසට ස්තුතියි! ❤️",
+        error: "Feedback යොමු කරන්න බැරි වුණා. නැවත උත්සාහ කරන්න."
+      },
+
+      en: {
+        title: "FEEDBACK",
+        subtitle: "Share your thoughts with us ❤️",
+        nameLabel: "Your Name",
+        namePlaceholder: "Enter your name",
+        ratingLabel: "Your Rating",
+        ratingPlaceholder: "Choose a rating",
+        ratings: [
+          "⭐ 1 - Poor", "⭐⭐ 2 - Fair",
+          "⭐⭐⭐ 3 - Good", "⭐⭐⭐⭐ 4 - Very Good",
+          "⭐⭐⭐⭐⭐ 5 - Excellent"
+        ],
+        messageLabel: "Your Feedback",
+        messagePlaceholder: "Write your feedback here...",
+        submit: "SUBMIT FEEDBACK",
+        sending: "Submitting...",
+        back: "← Back to Home",
+        thanks: "Thank you for your feedback! ❤️",
+        error: "Could not submit feedback. Please try again."
+      }
+    };
+
+    const languageSelect = document.getElementById("languageSelect");
+    const form = document.getElementById("feedbackForm");
+    const submitBtn = document.getElementById("submitBtn");
+    const result = document.getElementById("result");
+
+    function changeLanguage() {
+      const t = translations[languageSelect.value];
+
+      document.getElementById("title").textContent = t.title;
+      document.getElementById("subtitle").textContent = t.subtitle;
+      document.getElementById("nameLabel").textContent = t.nameLabel;
+      document.getElementById("name").placeholder = t.namePlaceholder;
+      document.getElementById("ratingLabel").textContent = t.ratingLabel;
+      document.getElementById("ratingPlaceholder").textContent =
+        t.ratingPlaceholder;
+      document.getElementById("messageLabel").textContent = t.messageLabel;
+      document.getElementById("message").placeholder = t.messagePlaceholder;
+      document.getElementById("backLink").textContent = t.back;
+
+      const rating = document.getElementById("rating");
+      for (let i = 1; i <= 5; i++) {
+        rating.options[i].textContent = t.ratings[i - 1];
+      }
+
+      if (!submitBtn.disabled) {
+        submitBtn.textContent = t.submit;
+      }
+
+      result.textContent = "";
+      document.documentElement.lang = languageSelect.value;
+    }
+
+    languageSelect.addEventListener("change", changeLanguage);
+
+    form.addEventListener("submit", async function(event) {
+      event.preventDefault();
+
+      const lang = languageSelect.value;
+      const t = translations[lang];
+
+      const name = document.getElementById("name").value.trim();
+      const rating = Number(document.getElementById("rating").value);
+      const message = document.getElementById("message").value.trim();
+
+      if (!name || !message || rating < 1 || rating > 5) return;
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = t.sending;
+      result.textContent = "";
+
+      try {
+        const { error } = await supabaseClient
+          .from("feedback")
+          .insert([{ name, rating, message }]);
+
+        if (error) throw error;
+
+        result.textContent = t.thanks;
+        form.reset();
+      } catch (error) {
+        console.error("Feedback submission failed:", error);
+        result.textContent = t.error;
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = translations[languageSelect.value].submit;
+      }
+    });
+
+    changeLanguage();
+  </script>
+</body>
+</html>
